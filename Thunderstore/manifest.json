@@ -1,0 +1,9 @@
+{
+    "name": "PushCompany",
+    "version_number": "1.0.0",
+    "website_url": "",
+    "description": "Push your fellow crewmates!",
+    "dependencies": [
+        "BepInEx-BepInExPack-5.4.2100"
+    ]
+}
