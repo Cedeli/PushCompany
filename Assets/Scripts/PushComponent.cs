@@ -6,13 +6,23 @@ namespace PushCompany.Assets.Scripts
 {
     public class PushComponent : NetworkBehaviour
     {
+        private NetworkVariable<float> PushRange = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<float> PushDistance = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<float> PushCost = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        public override void OnNetworkSpawn()
+        {
+            if (IsServer)
+            {
+                PushRange.Value = PushCompanyBase.config_PushRange.Value;
+                PushDistance.Value = PushCompanyBase.config_PushDistance.Value;
+                PushCost.Value = PushCompanyBase.config_PushCost.Value;
+            }
+        }
+
         [ServerRpc(RequireOwnership = false)]
         public void PushServerRpc(ulong playerId)
         {
-            const float PushRange = 3.0f;
-            const float PushDistance = 75.0f;
-            const string PlayerTag = "Player";
-
             GameObject playerObject = GetPlayerById(playerId);
             PlayerControllerB player = playerObject.GetComponent<PlayerControllerB>();
             Camera playerCamera = player.gameplayCamera;
@@ -41,14 +51,14 @@ namespace PushCompany.Assets.Scripts
             int playerLayerMask = 1 << playerObject.layer;
 
             Vector3 pushDirection = playerCamera.transform.forward.normalized;
-            RaycastHit[] pushRay = Physics.RaycastAll(playerCamera.transform.position, pushDirection, PushRange, playerLayerMask);
+            RaycastHit[] pushRay = Physics.RaycastAll(playerCamera.transform.position, pushDirection, PushRange.Value, playerLayerMask);
 
             foreach (RaycastHit hit in pushRay)
             {
-                if (hit.transform.CompareTag(PlayerTag) && hit.transform.gameObject != playerObject)
+                if (hit.transform.gameObject != playerObject)
                 {
                     PlayerControllerB hitPlayer = hit.transform.GetComponent<PlayerControllerB>();
-                    PushClientRpc(player.NetworkObjectId, hitPlayer.NetworkObjectId, pushDirection * PushDistance * Time.deltaTime);
+                    PushClientRpc(player.NetworkObjectId, hitPlayer.NetworkObjectId, pushDirection * PushDistance.Value * Time.deltaTime);
 
                     break;
                 }
@@ -69,7 +79,7 @@ namespace PushCompany.Assets.Scripts
 
             GameObject pusherObject = GetPlayerById(pusherId);
             PlayerControllerB pusher = pusherObject.GetComponent<PlayerControllerB>();
-            pusher.sprintMeter = Mathf.Clamp(pusher.sprintMeter - 0.08f, 0f, 1f);
+            pusher.sprintMeter = Mathf.Clamp(pusher.sprintMeter - PushCost.Value, 0f, 1f);
         }
 
         private static GameObject GetPlayerById(ulong playerId)
