@@ -1,9 +1,7 @@
 ﻿using GameNetcodeStuff;
 using HarmonyLib;
 using UnityEngine;
-using PushCompany;
 using PushCompany.Assets.Scripts;
-using System.Collections;
 
 [HarmonyPatch(typeof(PlayerControllerB))]
 public static class PlayerControllerB_Patches

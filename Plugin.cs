@@ -17,8 +17,9 @@ namespace PushCompany
 
         private readonly Harmony harmony = new Harmony(PluginInfo.PLUGIN_GUID);
 
-        public static ConfigEntry<float> 
-            config_PushDistance,
+        public static ConfigEntry<float>
+            config_PushCooldown,
+            config_PushForce,
             config_PushRange,
             config_PushCost;
 
@@ -54,7 +55,8 @@ namespace PushCompany
 
         private void ConfigSetup()
         {
-            config_PushDistance = Config.Bind("Push Distance", "Value", 75.0f, "How far the player pushes.");
+            config_PushCooldown = Config.Bind("Push Cooldown", "Value", 0.025f, "How long until the player can push again");
+            config_PushForce = Config.Bind("Push Force", "Value", 12.5f, "How strong the player pushes.");
             config_PushRange = Config.Bind("Push Range", "Value", 3.0f, "The distance the player is able to push.");
             config_PushCost = Config.Bind("Push Cost", "Value", 0.08f, "The energy cost of each push.");
         }

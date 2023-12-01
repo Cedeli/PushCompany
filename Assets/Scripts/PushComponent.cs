@@ -1,21 +1,28 @@
 ﻿using GameNetcodeStuff;
+using System.Collections;
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
+
 
 namespace PushCompany.Assets.Scripts
 {
     public class PushComponent : NetworkBehaviour
     {
-        private NetworkVariable<float> PushRange = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        private NetworkVariable<float> PushDistance = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        private NetworkVariable<float> PushCost = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private Dictionary<ulong, float> lastPushTimes = new Dictionary<ulong, float>();
+
+        private NetworkVariable<float> PushCooldown = new NetworkVariable<float>(0.0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<float> PushRange = new NetworkVariable<float>(0.0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<float> PushForce = new NetworkVariable<float>(0.0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<float> PushCost = new NetworkVariable<float>(0.0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         public override void OnNetworkSpawn()
         {
             if (IsServer)
             {
+                PushCooldown.Value = PushCompanyBase.config_PushCooldown.Value;
                 PushRange.Value = PushCompanyBase.config_PushRange.Value;
-                PushDistance.Value = PushCompanyBase.config_PushDistance.Value;
+                PushForce.Value = PushCompanyBase.config_PushForce.Value;
                 PushCost.Value = PushCompanyBase.config_PushCost.Value;
             }
         }
@@ -23,30 +30,20 @@ namespace PushCompany.Assets.Scripts
         [ServerRpc(RequireOwnership = false)]
         public void PushServerRpc(ulong playerId)
         {
+            if (lastPushTimes.TryGetValue(playerId, out float lastPushTime))
+            {
+                if (Time.time - lastPushTime < PushCooldown.Value) return;
+            }
+            else
+            {
+                lastPushTimes.Add(playerId, 0.0f);
+            }
+
             GameObject playerObject = GetPlayerById(playerId);
             PlayerControllerB player = playerObject.GetComponent<PlayerControllerB>();
             Camera playerCamera = player.gameplayCamera;
 
-            if (player.quickMenuManager.isMenuOpen)
-            {
-                return;
-            }
-            if (player.inSpecialInteractAnimation)
-            {
-                return;
-            }
-            if (player.isTypingChat)
-            {
-                return;
-            }
-            if (player.isMovementHindered > 0 && !player.isUnderwater)
-            {
-                return;
-            }
-            if (player.isExhausted)
-            {
-                return;
-            }
+            if (!CanPushPlayer(player)) return;
 
             int playerLayerMask = 1 << playerObject.layer;
 
@@ -58,8 +55,10 @@ namespace PushCompany.Assets.Scripts
                 if (hit.transform.gameObject != playerObject)
                 {
                     PlayerControllerB hitPlayer = hit.transform.GetComponent<PlayerControllerB>();
-                    PushClientRpc(player.NetworkObjectId, hitPlayer.NetworkObjectId, pushDirection * PushDistance.Value * Time.deltaTime);
+                    if (hitPlayer.inSpecialInteractAnimation) return;
 
+                    PushClientRpc(player.NetworkObjectId, hitPlayer.NetworkObjectId, pushDirection * PushForce.Value * Time.fixedDeltaTime);
+                    lastPushTimes[playerId] = Time.time;
                     break;
                 }
             }
@@ -71,15 +70,40 @@ namespace PushCompany.Assets.Scripts
             GameObject playerObject = GetPlayerById(playerId);
             PlayerControllerB player = playerObject.GetComponent<PlayerControllerB>();
 
-            player.thisController.Move(push);
+            StartCoroutine(SmoothMove(player.thisController, push));
 
-            player.movementAudio.pitch = Random.Range(0.5f, 0.75f);
             player.movementAudio.PlayOneShot(StartOfRound.Instance.playerJumpSFX);
-            player.movementAudio.pitch = Random.Range(0.93f, 1.07f);
 
             GameObject pusherObject = GetPlayerById(pusherId);
             PlayerControllerB pusher = pusherObject.GetComponent<PlayerControllerB>();
-            pusher.sprintMeter = Mathf.Clamp(pusher.sprintMeter - PushCost.Value, 0f, 1f);
+            pusher.sprintMeter = Mathf.Clamp(pusher.sprintMeter - PushCost.Value, 0.0f, 1.0f);
+        }
+
+        public IEnumerator SmoothMove(CharacterController controller, Vector3 push)
+        {
+            float force = PushForce.Value / 12.5f;
+            float smoothTime = push.magnitude / force;
+
+            Vector3 targetPosition = controller.transform.position + push;
+            Vector3 direction = (targetPosition - controller.transform.position).normalized;
+            float distance = Vector3.Distance(controller.transform.position, targetPosition);
+
+            for (float currentTime = 0; currentTime < smoothTime; currentTime += Time.fixedDeltaTime)
+            {
+                float currentDistance = distance * Mathf.Min(currentTime, smoothTime) / smoothTime;
+
+                controller.Move(direction * currentDistance);
+
+                yield return null;
+            }
+        }
+
+        private bool CanPushPlayer(PlayerControllerB player)
+        {
+            return !player.quickMenuManager.isMenuOpen &&
+                   !player.inSpecialInteractAnimation &&
+                   !player.isTypingChat &&
+                   !player.isExhausted;
         }
 
         private static GameObject GetPlayerById(ulong playerId)
