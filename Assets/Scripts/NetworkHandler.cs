@@ -11,14 +11,14 @@ public class NetworkHandler
     #region Host
     [HarmonyPrefix]
     [HarmonyPatch(typeof(MenuManager), "StartHosting")]
-    static void CacheHostNetworkHandler(ref GameNetworkManager __instance)
+    static void CacheHostNetworkHandler()
     {
         NetworkManager.Singleton.AddNetworkPrefab(PushCompanyBase.pushPrefab);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(MenuManager), "StartHosting")]
-    static void SpawnNetworkHandler(ref GameNetworkManager __instance)
+    static void SpawnNetworkHandler()
     {
         pushObject = Object.Instantiate(PushCompanyBase.pushPrefab);
 
@@ -28,7 +28,7 @@ public class NetworkHandler
         }
         catch
         {
-            PushCompanyBase.Instance.mls.LogError("Failed to instantiate network prefab!");
+            PushCompanyBase.Instance.Value.mls.LogError("Failed to instantiate network prefab!");
         }
     }
     #endregion Host
@@ -36,7 +36,7 @@ public class NetworkHandler
     #region Client
     [HarmonyPrefix]
     [HarmonyPatch(typeof(GameNetworkManager), "StartClient")]
-    static void CacheClientNetworkHandler(ref GameNetworkManager __instance)
+    static void CacheClientNetworkHandler()
     {
         NetworkManager.Singleton.AddNetworkPrefab(PushCompanyBase.pushPrefab);
     }

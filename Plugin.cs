@@ -3,6 +3,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using PushCompany.Assets.Scripts;
+using System;
 using System.Reflection;
 using UnityEngine;
 
@@ -11,7 +12,7 @@ namespace PushCompany
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
     public class PushCompanyBase : BaseUnityPlugin
     {
-        public static PushCompanyBase Instance;
+        public static readonly Lazy<PushCompanyBase> Instance = new Lazy<PushCompanyBase>(() => new PushCompanyBase());
         public static GameObject pushPrefab;
         public ManualLogSource mls;
 
@@ -25,7 +26,6 @@ namespace PushCompany
 
         private void Awake()
         {
-            if (Instance == null) Instance = this;
             mls = BepInEx.Logging.Logger.CreateLogSource(PluginInfo.PLUGIN_GUID);
 
             ConfigSetup();
@@ -64,17 +64,11 @@ namespace PushCompany
         private void LoadBundle()
         {
             AssetBundle pushBundle = AssetBundle.LoadFromMemory(Properties.Resources.pushcompany);
-            if (pushBundle == null)
-            {
-                mls.LogError("Failed to load Push Bundle!");
-                return;
-            }
+            if (pushBundle == null)throw new Exception("Failed to load Push Bundle!");
+
             pushPrefab = pushBundle.LoadAsset<GameObject>("Assets/Push.prefab");
-            if (pushPrefab == null)
-            {
-                mls.LogError("Failed to load Push Prefab!");
-                return;
-            }
+            if (pushPrefab == null) throw new Exception("Failed to load Push Prefab!");
+
             pushPrefab.AddComponent<PushComponent>();
         }
     }

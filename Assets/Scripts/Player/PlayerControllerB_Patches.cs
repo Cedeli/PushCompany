@@ -12,20 +12,17 @@ public static class PlayerControllerB_Patches
     [HarmonyPatch(typeof(PlayerControllerB), "Update")]
     static void Update(PlayerControllerB __instance)
     {
-        if (__instance.IsOwner)
-        {
-            if (pushComponent == null)
-            {
-                pushComponent = GameObject.FindObjectOfType<PushComponent>();
-            }
+        if (!__instance.IsOwner) return;
+        if (!__instance.playerActions.Movement.Interact.WasPressedThisFrame()) return;
 
-            if (__instance.playerActions.Movement.Interact.WasPressedThisFrame())
-            {
-                if (pushComponent != null)
-                {
-                    pushComponent.PushServerRpc(__instance.NetworkObjectId);
-                }
-            }
+        if (pushComponent == null)
+        {
+            pushComponent = GameObject.FindObjectOfType<PushComponent>();
+        }
+
+        if (pushComponent != null)
+        {
+            pushComponent.PushServerRpc(__instance.NetworkObjectId);
         }
     }
 }
