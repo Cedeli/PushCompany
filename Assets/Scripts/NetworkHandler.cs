@@ -1,35 +1,37 @@
 using HarmonyLib;
-using PushCompany;
 using Unity.Netcode;
 using UnityEngine;
 
-[HarmonyPatch]
-public class NetworkHandler
+namespace PushCompany.Assets.Scripts
 {
-    private static GameObject pushObject;
-
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(GameNetworkManager), "Start")]
-    static void Init()
+    [HarmonyPatch]
+    public class NetworkHandler
     {
-        NetworkManager.Singleton.AddNetworkPrefab(PushCompanyBase.pushPrefab);
-    }
+        private static GameObject pushObject;
 
-    [HarmonyPostfix]
-    [HarmonyPatch(typeof(StartOfRound), "Awake")]
-    static void SpawnNetworkPrefab()
-    {
-        try
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameNetworkManager), "Start")]
+        static void Init()
         {
-            if (NetworkManager.Singleton.IsServer)
-            {
-                pushObject = Object.Instantiate(PushCompanyBase.pushPrefab);
-                pushObject.GetComponent<NetworkObject>().Spawn(true);
-            }
+            NetworkManager.Singleton.AddNetworkPrefab(PushCompanyBase.pushPrefab);
         }
-        catch
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StartOfRound), "Awake")]
+        static void SpawnNetworkPrefab()
         {
-            PushCompanyBase.Instance.Value.mls.LogError("Failed to instantiate network prefab!");
+            try
+            {
+                if (NetworkManager.Singleton.IsServer)
+                {
+                    pushObject = Object.Instantiate(PushCompanyBase.pushPrefab);
+                    pushObject.GetComponent<NetworkObject>().Spawn(true);
+                }
+            }
+            catch
+            {
+                PushCompanyBase.Instance.Value.mls.LogError("Failed to instantiate network prefab!");
+            }
         }
     }
 }

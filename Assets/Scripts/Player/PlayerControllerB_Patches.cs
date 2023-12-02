@@ -1,28 +1,30 @@
 ﻿using GameNetcodeStuff;
 using HarmonyLib;
 using UnityEngine;
-using PushCompany.Assets.Scripts;
 
-[HarmonyPatch(typeof(PlayerControllerB))]
-public static class PlayerControllerB_Patches
+namespace PushCompany.Assets.Scripts
 {
-    private static PushComponent pushComponent;
-
-    [HarmonyPostfix]
-    [HarmonyPatch(typeof(PlayerControllerB), "Update")]
-    static void Update(PlayerControllerB __instance)
+    [HarmonyPatch(typeof(PlayerControllerB))]
+    public static class PlayerControllerB_Patches
     {
-        if (!__instance.IsOwner) return;
-        if (!__instance.playerActions.Movement.Interact.WasPressedThisFrame()) return;
+        private static PushComponent pushComponent;
 
-        if (pushComponent == null)
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PlayerControllerB), "Update")]
+        static void Update(PlayerControllerB __instance)
         {
-            pushComponent = GameObject.FindObjectOfType<PushComponent>();
-        }
+            if (!__instance.IsOwner) return;
+            if (!__instance.playerActions.Movement.Interact.WasPressedThisFrame()) return;
 
-        if (pushComponent != null)
-        {
-            pushComponent.PushServerRpc(__instance.NetworkObjectId);
+            if (pushComponent == null)
+            {
+                pushComponent = GameObject.FindObjectOfType<PushComponent>();
+            }
+
+            if (pushComponent != null)
+            {
+                pushComponent.PushServerRpc(__instance.NetworkObjectId);
+            }
         }
     }
 }

@@ -64,7 +64,7 @@ namespace PushCompany
         private void LoadBundle()
         {
             AssetBundle pushBundle = AssetBundle.LoadFromMemory(Properties.Resources.pushcompany);
-            if (pushBundle == null)throw new Exception("Failed to load Push Bundle!");
+            if (pushBundle == null) throw new Exception("Failed to load Push Bundle!");
 
             pushPrefab = pushBundle.LoadAsset<GameObject>("Assets/Push.prefab");
             if (pushPrefab == null) throw new Exception("Failed to load Push Prefab!");
